@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -48,14 +49,12 @@ const currentJSON = "./config/milestone.json"
 const graphDir = "./graph"
 const hashDat = graphDir + "/ipfs-hash-list.dat"
 
-// const paramFile = "./config/milestone.json"
-
 // Version string
 func semverInfo() string {
 	var majorSemver, minorSemver, patchSemver, wholeString string
 	majorSemver = "0"
 	minorSemver = "3"
-	patchSemver = "1"
+	patchSemver = "2"
 	wholeString = majorSemver + "." + minorSemver + "." + patchSemver
 	return wholeString
 }
@@ -146,16 +145,15 @@ func (graph *Graph) addTx(txType int, data string) {
 }
 
 func pushIPFS() {
-	searchDir := graphDir
-	// sh := shell.NewShell("localhost:5001")
-	fileList := []string{}
-	filepath.Walk(searchDir, func(path string, f os.FileInfo, err error) error {
-		fileList = append(fileList, path)
-		return nil
-	})
-	for _, file := range fileList {
-		pushTx(file)
+	start := time.Now()
+
+	matches, _ := filepath.Glob(graphDir + "/*.json")
+	for _, match := range matches {
+		pushTx(match)
 	}
+
+	end := time.Since(start)
+	fmt.Println("Finished in: ", end)
 }
 
 func pushTx(file string) string {
@@ -167,21 +165,30 @@ func pushTx(file string) string {
 		fmt.Fprintf(os.Stderr, "error: %s", err)
 		os.Exit(1)
 	}
-	fmt.Printf("\033[1;33madded \033[1;32m%s\033[1;33m for transaction \033[1;32m%s\033[1;33m", cid, file)
+	fmt.Printf("\033[1;33mTx: \033[1;32m%s\033[1;33m\nCID: \033[1;32m%s\033[1;33m", file, cid)
 	appendGraphCID(cid)
 	return cid
 }
 
 func appendGraphCID(cid string) {
-	f, err := os.OpenFile(hashDat,
+	hashfile, err := os.OpenFile(hashDat,
 		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		handle("something went wrong: ", err)
 	}
-	defer f.Close()
-	if _, err := f.WriteString(cid + "\n"); err != nil {
-		handle("something went wrong: ", err)
+	defer hashfile.Close()
+	if isExist(cid, hashDat) {
+		fmt.Println("\n\033[1;31mDuplicate! Skipping...\x1b[0m")
+	} else {
+		hashfile.WriteString(cid + "\n")
 	}
+
+}
+
+func isExist(str, filepath string) bool {
+	accused, _ := ioutil.ReadFile(filepath)
+	isExist, _ := regexp.Match(str, accused)
+	return isExist
 }
 
 // addMilestone This will add a milestone to the graph

@@ -12,11 +12,13 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/common-nighthawk/go-figure"
+	shell "github.com/ipfs/go-ipfs-api"
 	"github.com/libp2p/go-libp2p"
 	autonat "github.com/libp2p/go-libp2p-autonat-svc"
 	connmgr "github.com/libp2p/go-libp2p-connmgr"
@@ -44,6 +46,7 @@ const appRepository = "https://github.com/turtlecoin/go-karai"
 const credentialsFile = "private_credentials.karai"
 const currentJSON = "./config/milestone.json"
 const graphDir = "./graph"
+const hashDat = graphDir + "/ipfs-hash-list.dat"
 
 // const paramFile = "./config/milestone.json"
 
@@ -51,26 +54,10 @@ const graphDir = "./graph"
 func semverInfo() string {
 	var majorSemver, minorSemver, patchSemver, wholeString string
 	majorSemver = "0"
-	minorSemver = "2"
+	minorSemver = "3"
 	patchSemver = "1"
 	wholeString = majorSemver + "." + minorSemver + "." + patchSemver
 	return wholeString
-}
-
-// Hello Karai
-func main() {
-	locateGraphDir()
-	checkCreds()
-	ascii()
-	inputHandler()
-}
-
-// Splash logo
-func ascii() {
-	fmt.Println("\033[1;32m")
-	splash := figure.NewFigure("karai", "straight", true)
-	splash.Print()
-	fmt.Println("\x1b[0m")
 }
 
 // Graph This is the structure of the Graph
@@ -96,6 +83,22 @@ type GraphTx struct {
 // 	transactions []byte
 // 	// waveTip    GraphTx.Hash
 // }
+
+// Hello Karai
+func main() {
+	locateGraphDir()
+	checkCreds()
+	ascii()
+	inputHandler()
+}
+
+// Splash logo
+func ascii() {
+	fmt.Println("\033[1;32m")
+	splash := figure.NewFigure("karai", "straight", true)
+	splash.Print()
+	fmt.Println("\x1b[0m")
+}
 
 // checkCreds locate or create Karai credentials
 func checkCreds() {
@@ -140,6 +143,45 @@ func (graph *Graph) addTx(txType int, data string) {
 	prevTx := graph.transactions[len(graph.transactions)-1]
 	new := txConstructor(txType, data, prevTx.Hash)
 	graph.transactions = append(graph.transactions, new)
+}
+
+func pushIPFS() {
+	searchDir := graphDir
+	// sh := shell.NewShell("localhost:5001")
+	fileList := []string{}
+	filepath.Walk(searchDir, func(path string, f os.FileInfo, err error) error {
+		fileList = append(fileList, path)
+		return nil
+	})
+	for _, file := range fileList {
+		pushTx(file)
+	}
+}
+
+func pushTx(file string) string {
+	dat, _ := ioutil.ReadFile(file)
+	fmt.Print("\033[0;90m" + string(dat) + "\n")
+	sh := shell.NewShell("localhost:5001")
+	cid, err := sh.Add(strings.NewReader(string(dat)))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %s", err)
+		os.Exit(1)
+	}
+	fmt.Printf("\033[1;33madded \033[1;32m%s\033[1;33m for transaction \033[1;32m%s\033[1;33m", cid, file)
+	appendGraphCID(cid)
+	return cid
+}
+
+func appendGraphCID(cid string) {
+	f, err := os.OpenFile(hashDat,
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		handle("something went wrong: ", err)
+	}
+	defer f.Close()
+	if _, err := f.WriteString(cid + "\n"); err != nil {
+		handle("something went wrong: ", err)
+	}
 }
 
 // addMilestone This will add a milestone to the graph
@@ -202,20 +244,6 @@ func generatePointer() {
 	fmt.Println("\nAscii:\tktx(" + strings.TrimRight(ktxIP, "\n") + ":" + strings.TrimRight(ktxPort, "\n") + ")")
 }
 
-// // introduce Tx wave to IPFS
-// func egressTx() {
-// 	sh := shell.NewShell("localhost:5001")
-// 	// TODO: Refactor txPack to bundle N Tx JSONs
-// 	// TODO: txPack - Refactor paginated Tx bundles
-// 	txPack := []byte()
-// 	cid, err := sh.Add(strings.NewReader(txPack))
-// 	if err != nil {
-// 		fmt.Fprintf(os.Stderr, "error: %s", err)
-// 		os.Exit(1)
-// 	}
-// 	fmt.Printf("added Tx to IPFS @ %s", cid)
-// }
-
 // loadMilestoneJSON Read pending milestone Tx JSON
 func loadMilestoneJSON() string {
 	// TODO: Check if milestone is ready first, avoid re-use
@@ -225,20 +253,20 @@ func loadMilestoneJSON() string {
 	// Kek
 }
 
-// txHandler Wait for Tx, assemble subgraph
-func txHandler() {
-	var txListenTime time.Duration = 10
-	var txPoolDepth int = 0
-	if txPoolDepth > 0 {
-		// if a tx is received, start the interval, listen for Tx, assemble subgraph
-		// var int64 SubGraph.timeStamp = time.Now().Unix()
-		// fmt.Println("Transaction Wave Forming...\nTimestamp: " + string(SubGraph.timeStamp))
-		time.Sleep(txListenTime * time.Second)
-		fmt.Println("Listening for " + string(txListenTime) + " seconds")
-	}
-	// order the transactions
-	// assign positions on graph
-}
+// // txHandler Wait for Tx, assemble subgraph
+// func txHandler() {
+// 	var txListenTime time.Duration = 10
+// 	var txPoolDepth int = 0
+// 	if txPoolDepth > 0 {
+// 		// if a tx is received, start the interval, listen for Tx, assemble subgraph
+// 		// var int64 SubGraph.timeStamp = time.Now().Unix()
+// 		// fmt.Println("Transaction Wave Forming...\nTimestamp: " + string(SubGraph.timeStamp))
+// 		time.Sleep(txListenTime * time.Second)
+// 		fmt.Println("Listening for " + string(txListenTime) + " seconds")
+// 	}
+// 	// order the transactions
+// 	// assign positions on graph
+// }
 
 // menuCreatePeer Create Libp2p Peer
 func menuCreatePeer() {
@@ -436,6 +464,9 @@ func inputHandler() {
 		} else if strings.Compare("transaction-history", text) == 0 {
 			logrus.Debug("Opening Transaction History")
 			menuGetContainerTransactions()
+		} else if strings.Compare("push-graph", text) == 0 {
+			logrus.Debug("Opening Graph History")
+			pushIPFS()
 		} else if strings.Compare("open-wallet-info", text) == 0 {
 			logrus.Debug("Opening Wallet Info")
 			menuOpenWalletInfo()
@@ -473,6 +504,7 @@ func menu() {
 	fmt.Println("\033[1;37mcreate-channel \t\t \033[0;37mCreate a karai transaction channel\x1b[0m")
 	fmt.Println("\033[1;37mgenerate-pointer \t \033[0;37mGenerate a Karai <=> TRTL pointer\x1b[0m")
 	fmt.Println("\033[1;37mbenchmark \t\t \033[0;37mConducts timed benchmark\033[0m")
+	fmt.Println("\033[1;37mpush-graph \t\t \033[0;37mPrints graph history\033[0m")
 	fmt.Println("\n\033[1;32mWALLET_API_OPTIONS\033[1;37m\x1b[0m")
 	fmt.Println("\033[1;37mopen-wallet \t\t \033[0;37mOpen a TRTL wallet\x1b[0m")
 	fmt.Println("\033[1;37mopen-wallet-info \t \033[0;37mShow wallet and connection info\x1b[0m")

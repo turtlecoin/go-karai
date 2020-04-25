@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	github.com/common-nighthawk/go-figure v0.0.0-20190529165535-67e0ed34491a
+	github.com/ipfs/go-ipfs-api v0.0.3
 	github.com/libp2p/go-libp2p v0.8.1
 	github.com/libp2p/go-libp2p-autonat-svc v0.1.0
 	github.com/libp2p/go-libp2p-connmgr v0.2.1

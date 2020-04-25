@@ -8,7 +8,7 @@
 *.backup
 *.karai
 go-karai
-graph/
+graph/*.dat
 graph/*.json
 .vscode/
 

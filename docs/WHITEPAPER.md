@@ -14,7 +14,7 @@ The role of the go-karai node is to receive, arrange, and append transactions to
 
 ## Technical Notes
 
-P2P peer-addressing is handled by libp2p, with content-addressing provided by IPFS. The P2P connection is created with TLS, QUIC, and NAT Traversal enabled be default. Golang was chosen for this implementation out of preference for a fast and easy to learn compiled language that could produce a cross platform binary without the use of proprietary software and development environements.
+P2P peer-addressing is handled by libp2p, with content-addressing provided by IPFS. The P2P connection is created with TLS, QUIC, and NAT Traversal enabled by default. Golang was chosen for this implementation out of preference for a fast and easy to learn compiled language that could produce a cross platform binary without the use of proprietary software and development environements.
 
 ### Transactions
 
@@ -81,7 +81,7 @@ Karai designates the founding node of a transaction channel as the Channel Coord
 -   In **'linear mode'** transactions arranged in the typical order follow one another in a single timeline (zero arrangement).
 -   In **'wave mode'**, the transactions take on a new role depending on their position in a multipath time limited subgraph. (varied arrangement)
 
-Karai differs from conventional networks in that there are is no mining, and no empty space being created when there are no transactions to be appended. In wave mode, after channel creation or after a period of inactivity, a new transaction arriving will trigger a 'listen interval' that gathers subsequent transactions. This interval is a key variable in subgraph formation, but can be disregarded entirely in linear mode. While the interval is open, a transaction still can be determined to be valid thought its final position in the subgraph can be variable.
+Karai differs from conventional networks in that there is no mining, and no empty space being created when there are no transactions to be appended. In wave mode, after channel creation or after a period of inactivity, a new transaction arriving will trigger a 'listen interval' that gathers subsequent transactions. This interval is a key variable in subgraph formation, but can be disregarded entirely in linear mode. While the interval is open, a transaction still can be determined to be valid thought its final position in the subgraph can be variable.
 
 Note: At the time of this writing, positional transaction metadata is non-hashed data, meaning there is a degree of maleability with regards to tip selection and final transaction position in the subgraph.
 

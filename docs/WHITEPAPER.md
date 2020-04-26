@@ -91,7 +91,7 @@ A subgraph is a directed rooted tree made of type 2 transactions gathered in the
 
 The subgraph root is known as the 'wave tip'. This special role is assigned to the first transaction in a listen interval. Upon initiating the subgraph, this first transaction accumulates peer metadata for the peer ids that own a transaction in the subgraph.
 
-As a bonus to scalability over linear mode configurations, the subgraph tip metadata also aids in non-linear edge-tracing of the graph by allowing scanning for owned transactions to occur from milestone to wavetip rather than trasversing every transaction, decreasing the time for a peer to reach a fully synced state.
+As a bonus to scalability over linear mode configurations, the subgraph tip metadata also aids in non-linear edge-tracing of the graph by allowing scanning for owned transactions to occur from milestone to wavetip rather than traversing every transaction, decreasing the time for a peer to reach a fully synced state.
 
 ### Example Wave Construction
 

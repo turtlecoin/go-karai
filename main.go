@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	shell "github.com/ipfs/go-ipfs-api"
 	"github.com/libp2p/go-libp2p"
 	autonat "github.com/libp2p/go-libp2p-autonat-svc"
@@ -95,10 +96,10 @@ func main() {
 
 // Splash logo
 func ascii() {
-	fmt.Printf("\n\033[1;32m")
+	fmt.Printf("\n")
+	color.Set(color.FgGreen, color.Bold)
 	fmt.Printf("|   _   _  _  .\n")
 	fmt.Printf("|( (_| |  (_| |\n")
-	fmt.Printf("\x1b[0m")
 }
 
 // checkCreds locate or create Karai credentials
@@ -160,14 +161,15 @@ func pushIPFS() {
 
 func pushTx(file string) string {
 	dat, _ := ioutil.ReadFile(file)
-	fmt.Print("\033[0;90m" + string(dat) + "\n")
+	color.Set(color.FgBlack, color.Bold)
+	fmt.Print(string(dat) + "\n")
 	sh := shell.NewShell("localhost:5001")
 	cid, err := sh.Add(strings.NewReader(string(dat)))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %s", err)
 		os.Exit(1)
 	}
-	fmt.Printf("\033[1;33mTx: \033[1;32m%s\033[1;33m\nCID: \033[1;32m%s\033[1;33m", file, cid)
+	fmt.Printf(color.GreenString("%v %v\n%v %v", color.YellowString("Tx:"), color.GreenString(file), color.YellowString("CID: "), color.GreenString(cid)))
 	appendGraphCID(cid)
 	return cid
 }
@@ -180,7 +182,7 @@ func appendGraphCID(cid string) {
 	}
 	defer hashfile.Close()
 	if isExist(cid, hashDat) {
-		fmt.Println("\n\033[1;31mDuplicate! Skipping...\x1b[0m")
+		fmt.Printf("%v", color.RedString("\nDuplicate! Skipping...\n"))
 	} else {
 		hashfile.WriteString(cid + "\n")
 	}
@@ -240,7 +242,7 @@ func portToHex(port string) string {
 
 // generatePointer create the TRTL <=> Karai pointer
 func generatePointer() {
-	logrus.Info("Creating a new Karai <=> TRTL pointer")
+	logrus.Debug("Creating a new Karai <=> TRTL pointer")
 	readerKtxIP := bufio.NewReader(os.Stdin)
 	fmt.Print("Enter Karai Coordinator IP: ")
 	ktxIP, _ := readerKtxIP.ReadString('\n')
@@ -349,9 +351,10 @@ func spawnChannel() {
 	graph := spawnGraph()
 	// Add the current milestone.json in config
 	graph.addMilestone(loadMilestoneJSON())
+	graph.addTx(2, "{\"tx_slot\": 3}")
 	// go txHandler()
 	// Report Txs
-	fmt.Println("\nTx Legend: \033[1;33mRoot\x1b[0m \033[1;32mMilestone\x1b[0m \033[1;34mNormal\x1b[0m")
+	fmt.Printf("\n\nTx Legend: %v %v %v\n", color.YellowString("Root"), color.GreenString("Milestone"), color.BlueString("Normal"))
 	for key, transaction := range graph.transactions {
 		var hash string = fmt.Sprintf("%x", transaction.Hash)
 		var prevHash string = fmt.Sprintf("%x", transaction.PrevHash)
@@ -362,7 +365,8 @@ func spawnChannel() {
 			w := bufio.NewWriter(f)
 			w.WriteString(dataString)
 			w.Flush()
-			fmt.Printf("\033[1;36mTx(\033[1;33m%x\033[1;36m)\x1b[0m %x\n", key, transaction.Hash)
+			// fmt.Printf("\nTx(%x) %x\n", key, transaction.Hash)
+			fmt.Printf("\nTx(%v) %x\n", color.YellowString(strconv.Itoa(key)), transaction.Hash)
 		} else if len(prevHash) > 2 {
 			dataString := "{\n\t\"tx_type\": " + strconv.Itoa(transaction.TxType) + ",\n\t\"tx_hash\": \"" + hash + "\",\n\t\"tx_prev\": \"" + prevHash + "\",\n\t\"tx_extra\": " + string(transaction.Extra) + "\n}"
 			f, _ := os.Create(graphDir + "/" + "Tx_" + strconv.Itoa(key) + ".json")
@@ -372,13 +376,13 @@ func spawnChannel() {
 			// Indicate Tx type by color
 			if transaction.TxType == 0 {
 				// Root Tx
-				fmt.Printf("\033[1;36mTx(\033[1;33m%x\033[1;36m)\x1b[0m %x\n", key, transaction.Hash)
+				fmt.Printf("Tx(%v) %x\n", color.YellowString(strconv.Itoa(key)), transaction.Hash)
 			} else if transaction.TxType == 1 {
 				// Milestone Tx
-				fmt.Printf("\033[1;36mTx(\033[1;32m%x\033[1;36m)\x1b[0m %x\n", key, transaction.Hash)
+				fmt.Printf("Tx(%v) %x\n", color.GreenString(strconv.Itoa(key)), transaction.Hash)
 			} else if transaction.TxType == 2 {
 				// Normal Tx
-				fmt.Printf("\033[1;36mTx(\033[1;34m%x\033[1;36m)\x1b[0m %x\n", key, transaction.Hash)
+				fmt.Printf("Tx(%v) %x\n", color.BlueString(strconv.Itoa(key)), transaction.Hash)
 			}
 		}
 	}
@@ -402,34 +406,35 @@ func benchmark() {
 		graph.addTx(2, dataString)
 	}
 	end := time.Since(start)
-	fmt.Println("\nTx Legend: \033[1;33mRoot\x1b[0m \033[1;32mMilestone\x1b[0m \033[1;34mNormal\x1b[0m")
+	fmt.Printf("\n\nTx Legend: %v %v %v\n", color.YellowString("Root"), color.GreenString("Milestone"), color.BlueString("Normal"))
 	for key, transaction := range graph.transactions {
 		var hash string = fmt.Sprintf("%x", transaction.Hash)
 		var prevHash string = fmt.Sprintf("%x", transaction.PrevHash)
+		// Root Tx will not have a previous hash
 		if prevHash == "" {
 			dataString := "{\n\t\"tx_type\": " + strconv.Itoa(transaction.TxType) + ",\n\t\"tx_hash\": \"" + hash + "\",\n\t\"tx_extra\": \"" + string(transaction.Extra) + "\"\n}"
-			// Write the Tx to disk in JSON format
 			f, _ := os.Create(graphDir + "/" + "Tx_" + strconv.Itoa(key) + ".json")
 			w := bufio.NewWriter(f)
 			w.WriteString(dataString)
 			w.Flush()
-			fmt.Printf("\033[1;36mTx(\033[1;33m%x\033[1;36m)\x1b[0m %x\n", key, transaction.Hash)
+			// fmt.Printf("\nTx(%x) %x\n", key, transaction.Hash)
+			fmt.Printf("\nTx(%v) %x\n", color.YellowString(strconv.Itoa(key)), transaction.Hash)
 		} else if len(prevHash) > 2 {
 			dataString := "{\n\t\"tx_type\": " + strconv.Itoa(transaction.TxType) + ",\n\t\"tx_hash\": \"" + hash + "\",\n\t\"tx_prev\": \"" + prevHash + "\",\n\t\"tx_extra\": " + string(transaction.Extra) + "\n}"
-			// Write the Tx to disk in JSON format
 			f, _ := os.Create(graphDir + "/" + "Tx_" + strconv.Itoa(key) + ".json")
 			w := bufio.NewWriter(f)
 			w.WriteString(dataString)
 			w.Flush()
+			// Indicate Tx type by color
 			if transaction.TxType == 0 {
 				// Root Tx
-				fmt.Printf("\033[1;36mTx(\033[1;33m%x\033[1;36m)\x1b[0m %x\n", key, transaction.Hash)
+				fmt.Printf("Tx(%v) %x\n", color.YellowString(strconv.Itoa(key)), transaction.Hash)
 			} else if transaction.TxType == 1 {
 				// Milestone Tx
-				fmt.Printf("\033[1;36mTx(\033[1;32m%x\033[1;36m)\x1b[0m %x\n", key, transaction.Hash)
+				fmt.Printf("Tx(%v) %x\n", color.GreenString(strconv.Itoa(key)), transaction.Hash)
 			} else if transaction.TxType == 2 {
 				// Normal Tx
-				fmt.Printf("\033[1;36mTx(\033[1;34m%x\033[1;36m)\x1b[0m %x\n", key, transaction.Hash)
+				fmt.Printf("Tx(%v) %x\n", color.BlueString(strconv.Itoa(key)), transaction.Hash)
 			}
 		}
 	}
@@ -450,8 +455,8 @@ func locateGraphDir() {
 func inputHandler() {
 	reader := bufio.NewReader(os.Stdin)
 	for {
-		fmt.Println("\n\033[0;37mType \033[1;32m'menu'\033[0;37m to view a list of commands\033[1;37m")
-		fmt.Print("\033[1;32m-> \033[0;37m")
+		fmt.Printf("\n%v%v%v\n", color.WhiteString("Type '"), color.GreenString("menu"), color.WhiteString("' to view a list of commands"))
+		fmt.Print(color.GreenString("-> "))
 		text, _ := reader.ReadString('\n')
 		text = strings.Replace(text, "\n", "", -1)
 		if strings.Compare("help", text) == 0 {
@@ -511,23 +516,33 @@ func inputHandler() {
 
 // provide list of commands
 func menu() {
-	fmt.Println("\n\033[1;32mCHANNEL_OPTIONS\033[1;37m\x1b[0m")
-	fmt.Println("\033[1;37mcreate-channel \t\t \033[0;37mCreate a karai transaction channel\x1b[0m")
-	fmt.Println("\033[1;37mgenerate-pointer \t \033[0;37mGenerate a Karai <=> TRTL pointer\x1b[0m")
-	fmt.Println("\033[1;37mbenchmark \t\t \033[0;37mConducts timed benchmark\033[0m")
-	fmt.Println("\033[1;37mpush-graph \t\t \033[0;37mPrints graph history\033[0m")
-	fmt.Println("\n\033[1;32mWALLET_API_OPTIONS\033[1;37m\x1b[0m")
-	fmt.Println("\033[1;37mopen-wallet \t\t \033[0;37mOpen a TRTL wallet\x1b[0m")
-	fmt.Println("\033[1;37mopen-wallet-info \t \033[0;37mShow wallet and connection info\x1b[0m")
-	fmt.Println("\033[1;37mcreate-wallet \t\t \033[0;37mCreate a TRTL wallet\x1b[0m")
-	fmt.Println("\033[1;30mwallet-balance \t\t Displays wallet balance\x1b[0m")
-	fmt.Println("\n\033[1;32mIPFS_OPTIONS\033[1;37m\x1b[0m")
-	fmt.Println("\033[1;37mcreate-peer \t\t \033[0;37mCreates IPFS peer\x1b[0m")
-	fmt.Println("\033[1;30mlist-servers \t\t Lists pinning servers\x1b[0m")
-	fmt.Println("\n\033[1;32mGENERAL_OPTIONS\033[1;37m\x1b[0m")
-	fmt.Println("\033[1;37mversion \t\t \033[0;37mDisplays version\033[0m")
-	fmt.Println("\033[1;37mlicense \t\t \033[0;37mDisplays license\033[0m")
-	fmt.Println("\033[1;37mexit \t\t\t \033[0;37mQuit immediately\x1b[0m")
+	color.Set(color.FgGreen)
+	fmt.Println("\nCHANNEL_OPTIONS")
+	color.Set(color.FgWhite)
+	fmt.Println("create-channel \t\t Create a karai transaction channel")
+	fmt.Println("generate-pointer \t Generate a Karai <=> TRTL pointer")
+	fmt.Println("benchmark \t\t Conducts timed benchmark")
+	fmt.Println("push-graph \t\t Prints graph history")
+	color.Set(color.FgGreen)
+	fmt.Println("\nWALLET_API_OPTIONS")
+	color.Set(color.FgWhite)
+	fmt.Println("open-wallet \t\t Open a TRTL wallet")
+	fmt.Println("open-wallet-info \t Show wallet and connection info")
+	fmt.Println("create-wallet \t\t Create a TRTL wallet")
+	color.Set(color.FgHiBlack)
+	fmt.Println("wallet-balance \t\t Displays wallet balance")
+	color.Set(color.FgGreen)
+	fmt.Println("\nIPFS_OPTIONS")
+	color.Set(color.FgWhite)
+	fmt.Println("create-peer \t\t Creates IPFS peer")
+	color.Set(color.FgHiBlack)
+	fmt.Println("list-servers \t\t Lists pinning servers")
+	color.Set(color.FgGreen)
+	fmt.Println("\nGENERAL_OPTIONS")
+	color.Set(color.FgWhite)
+	fmt.Println("version \t\t Displays version")
+	fmt.Println("license \t\t Displays license")
+	fmt.Println("exit \t\t\t Quit immediately")
 	fmt.Println("")
 }
 
@@ -599,9 +614,14 @@ func walletInfoPrimaryAddressBalance() {
 
 // Print the license for the user
 func printLicense() {
-	fmt.Println("\n\033[1;32m" + appName + " \033[0;32mv" + semverInfo() + "\033[0;37m by \033[1;37m" + appDev)
-	fmt.Println("\033[0;32m" + appRepository + "\n" + appURL + "\n")
-	fmt.Println("\033[1;37mMIT License\n\nCopyright (c) 2020-2021 RockSteady, TurtleCoin Developers\n\033[1;30mPermission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the 'Software'), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in allcopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.")
+	fmt.Printf(color.GreenString("\n"+appName+" v"+semverInfo()) + color.WhiteString(" by "+appDev))
+	color.Set(color.FgGreen)
+	fmt.Println("\n" + appRepository + "\n" + appURL + "\n")
+
+	color.Set(color.FgHiWhite)
+	fmt.Println("\nMIT License\nCopyright (c) 2020-2021 RockSteady, TurtleCoin Developers\n")
+	color.Set(color.FgHiBlack)
+	fmt.Println("Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the 'Software'), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in allcopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.")
 	fmt.Println()
 }
 

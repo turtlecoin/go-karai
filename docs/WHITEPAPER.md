@@ -14,7 +14,7 @@ The role of the go-karai node is to receive, arrange, and append transactions to
 
 ## Technical Notes
 
-P2P peer-addressing is handled by libp2p, with content-addressing provided by IPFS. The P2P connection is created with TLS, QUIC, and NAT Traversal enabled by default. Golang was chosen for this implementation out of preference for a fast and easy to learn compiled language that could produce a cross platform binary without the use of proprietary software and development environements.
+P2P peer-addressing is handled by libp2p, with content-addressing provided by IPFS. The P2P connection is created with TLS, QUIC, and NAT Traversal enabled by default. Golang was chosen for this implementation out of preference for a fast and easy to learn compiled language that could produce a cross platform binary without the use of proprietary software and development environments.
 
 ### Transactions
 
@@ -91,7 +91,7 @@ A subgraph is a directed rooted tree made of type 2 transactions gathered in the
 
 The subgraph root is known as the 'wave tip'. This special role is assigned to the first transaction in a listen interval. Upon initiating the subgraph, this first transaction accumulates peer metadata for the peer ids that own a transaction in the subgraph.
 
-As a bonus to scalability over linear mode configurations, the subgraph tip metadata also aids in non-linear edge-tracing of the graph by allowing scanning for owned transactions to occur from milestone to wavetip rather than trasversing every transaction, decreasing the time for a peer to reach a fully synced state.
+As a bonus to scalability over linear mode configurations, the subgraph tip metadata also aids in non-linear edge-tracing of the graph by allowing scanning for owned transactions to occur from milestone to wavetip rather than traversing every transaction, decreasing the time for a peer to reach a fully synced state.
 
 ### Example Wave Construction
 

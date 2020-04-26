@@ -14,7 +14,7 @@ The role of the go-karai node is to receive, arrange, and append transactions to
 
 ## Technical Notes
 
-P2P peer-addressing is handled by libp2p, with content-addressing provided by IPFS. The P2P connection is created with TLS, QUIC, and NAT Traversal enabled by default. Golang was chosen for this implementation out of preference for a fast and easy to learn compiled language that could produce a cross platform binary without the use of proprietary software and development environements.
+P2P peer-addressing is handled by libp2p, with content-addressing provided by IPFS. The P2P connection is created with TLS, QUIC, and NAT Traversal enabled by default. Golang was chosen for this implementation out of preference for a fast and easy to learn compiled language that could produce a cross platform binary without the use of proprietary software and development environments.
 
 ### Transactions
 

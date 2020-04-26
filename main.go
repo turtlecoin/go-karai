@@ -18,7 +18,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/common-nighthawk/go-figure"
 	shell "github.com/ipfs/go-ipfs-api"
 	"github.com/libp2p/go-libp2p"
 	autonat "github.com/libp2p/go-libp2p-autonat-svc"
@@ -96,10 +95,10 @@ func main() {
 
 // Splash logo
 func ascii() {
-	fmt.Println("\033[1;32m")
-	splash := figure.NewFigure("karai", "straight", true)
-	splash.Print()
-	fmt.Println("\x1b[0m")
+	fmt.Printf("\n\033[1;32m")
+	fmt.Printf("|   _   _  _  .\n")
+	fmt.Printf("|( (_| |  (_| |\n")
+	fmt.Printf("\x1b[0m")
 }
 
 // checkCreds locate or create Karai credentials
@@ -452,7 +451,7 @@ func inputHandler() {
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		fmt.Println("\n\033[0;37mType \033[1;32m'menu'\033[0;37m to view a list of commands\033[1;37m")
-		fmt.Print("-> ")
+		fmt.Print("\033[1;32m-> \033[0;37m")
 		text, _ := reader.ReadString('\n')
 		text = strings.Replace(text, "\n", "", -1)
 		if strings.Compare("help", text) == 0 {

@@ -19,7 +19,9 @@ jobs:
             - name: Checkout code
               uses: actions/checkout@v2
             - name: Build
-              run: go build -gcflags="-e"
+              run: |
+                mkdir bin
+                go build -gcflags="-e" -o bin
             - name: Prepare To Deploy
               id: before_deploy
               shell: bash
@@ -31,18 +33,20 @@ jobs:
                   if [[ "${TAG:5:4}" == "tags" ]]; then export TAG=${TAG:10}; else export TAG=${COMMIT_SHA}; fi
                   rm -rf go-karai-${TAG}
                   mkdir go-karai-${TAG}
-                  cp go-karai go-karai-${TAG}
+                  cp bin/* go-karai-${TAG}
+                  tar cvfz go-karai-${LABEL}-${TAG}.tar.gz go-karai-${TAG}/
                   echo ::set-output name=binary_path::go-karai-${TAG}
                   echo ::set-output name=artifact_name::go-karai-${LABEL}-${TAG}
+                  echo ::set-output name=file_name::go-karai-${LABEL}-${TAG}.tar.gz
             - name: Upload To GH Release
               if: github.event_name == 'release' && github.repository == 'turtlecoin/go-karai' && matrix.go-version == '1.14.x'
               uses: actions/upload-release-asset@v1
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               with:
-                  upload_url: ${{ github.even.release.upload_url }}
-                  asset_path: ./go-karai
-                  asset_name: ${{ steps.before_deploy.outputs.artifact_name }}
+                  upload_url: ${{ github.event.release.upload_url }}
+                  asset_path: ${{ steps.before_deploy.outputs.file_name }}
+                  asset_name: ${{ steps.before_deploy.outputs.file_name }}
                   asset_content_type: application/octet-stream
             - name: Upload To GH Artifacts
               if: matrix.go-version == '1.14.x'

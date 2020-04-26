@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/gorilla/mux"
 	shell "github.com/ipfs/go-ipfs-api"
 	"github.com/libp2p/go-libp2p"
 	autonat "github.com/libp2p/go-libp2p-autonat-svc"
@@ -44,13 +45,16 @@ const appLicense = "https://choosealicense.com/licenses/mit/"
 const appRepository = "https://github.com/turtlecoin/go-karai"
 const appURL = "https://karai.io"
 
-// Location constants
+// File & folder constants
 const credentialsFile = "private_credentials.karai"
 const currentJSON = "./config/milestone.json"
 const graphDir = "./graph"
 const hashDat = graphDir + "/ipfs-hash-list.dat"
 
+// Coordinator values
 var isCoordinator bool = false
+var karaiPort string = "4200"
+var p2pPeerID string = ""
 
 // Version string
 func semverInfo() string {
@@ -91,8 +95,75 @@ func main() {
 	locateGraphDir()
 	checkCreds()
 	ascii()
+	go restAPI()
 	inputHandler()
 }
+
+func restAPI() {
+	r := mux.NewRouter()
+
+	api := r.PathPrefix("/api/v1").Subrouter()
+	api.HandleFunc("", returnPeerID).Methods(http.MethodGet)
+	api.HandleFunc("/version", returnVersion).Methods(http.MethodGet)
+	api.HandleFunc("/transactions", returnTransactions).Methods(http.MethodGet)
+	// api.HandleFunc("", post).Methods(http.MethodPost)
+	// api.HandleFunc("", put).Methods(http.MethodPut)
+	// api.HandleFunc("", delete).Methods(http.MethodDelete)
+
+	logrus.Error(http.ListenAndServe(":"+karaiPort, r))
+}
+
+func notFound(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNotFound)
+	w.Write([]byte(`{"bruh": "lol"}`))
+}
+
+func returnPeerID(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if p2pPeerID == "" {
+		w.Write([]byte("{\"p2p_peer_ID\": \"ERR: NO PEER ID\"}"))
+	} else if p2pPeerID != "" {
+		w.Write([]byte("{\"p2p_peer_ID\": \"" + p2pPeerID + "\"}"))
+	}
+}
+
+func returnVersion(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("{\"karai_version\": \"" + semverInfo() + "\"}"))
+}
+
+func returnTransactions(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	matches, _ := filepath.Glob(graphDir + "/*.json")
+	w.Write([]byte("[\n\t"))
+	for _, match := range matches {
+		w.Write([]byte(printTx(match)))
+	}
+	w.Write([]byte("{}"))
+	w.Write([]byte("\n]"))
+}
+
+// func post(w http.ResponseWriter, r *http.Request) {
+// 	w.Header().Set("Content-Type", "application/json")
+// 	w.WriteHeader(http.StatusCreated)
+// 	w.Write([]byte(`{"": ""}`))
+// }
+
+// func put(w http.ResponseWriter, r *http.Request) {
+// 	w.Header().Set("Content-Type", "application/json")
+// 	w.WriteHeader(http.StatusAccepted)
+// 	w.Write([]byte(`{"": ""}`))
+// }
+
+// func delete(w http.ResponseWriter, r *http.Request) {
+// 	w.Header().Set("Content-Type", "application/json")
+// 	w.WriteHeader(http.StatusOK)
+// 	w.Write([]byte(`{"": ""}`))
+// }
 
 // Splash logo
 func ascii() {
@@ -172,6 +243,12 @@ func pushTx(file string) string {
 	fmt.Printf(color.GreenString("%v %v\n%v %v", color.YellowString("Tx:"), color.GreenString(file), color.YellowString("CID: "), color.GreenString(cid)))
 	appendGraphCID(cid)
 	return cid
+}
+
+func printTx(file string) string {
+	dat, _ := ioutil.ReadFile(file)
+	datString := string(dat) + ",\n"
+	return datString
 }
 
 func appendGraphCID(cid string) {
@@ -619,9 +696,9 @@ func printLicense() {
 	fmt.Println("\n" + appRepository + "\n" + appURL + "\n")
 
 	color.Set(color.FgHiWhite)
-	fmt.Println("\nMIT License\nCopyright (c) 2020-2021 RockSteady, TurtleCoin Developers\n")
+	fmt.Println("\nMIT License\nCopyright (c) 2020-2021 RockSteady, TurtleCoin Developers")
 	color.Set(color.FgHiBlack)
-	fmt.Println("Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the 'Software'), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in allcopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.")
+	fmt.Println("\nPermission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the 'Software'), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in allcopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.")
 	fmt.Println()
 }
 

@@ -50,6 +50,8 @@ const currentJSON = "./config/milestone.json"
 const graphDir = "./graph"
 const hashDat = graphDir + "/ipfs-hash-list.dat"
 
+var isCoordinator bool = false
+
 // Version string
 func semverInfo() string {
 	var majorSemver, minorSemver, patchSemver, wholeString string
@@ -209,6 +211,8 @@ func txConstructor(txType int, data string, prevHash []byte) *GraphTx {
 
 // rootTx Transaction channels start with a rootTx transaction always
 func rootTx() *GraphTx {
+	var isCoordinator bool = true
+	fmt.Printf("Coordinator status: %t", isCoordinator)
 	return txConstructor(0, "Karai Transaction Channel - Root", []byte{})
 }
 

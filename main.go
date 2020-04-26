@@ -42,6 +42,7 @@ const appDev = "The TurtleCoin Developers"
 const appDescription = appName + " - Karai Transaction Channels"
 const appLicense = "https://choosealicense.com/licenses/mit/"
 const appRepository = "https://github.com/turtlecoin/go-karai"
+const appURL = "https://karai.io"
 
 // Location constants
 const credentialsFile = "private_credentials.karai"
@@ -596,7 +597,7 @@ func walletInfoPrimaryAddressBalance() {
 // Print the license for the user
 func printLicense() {
 	fmt.Println("\n\033[1;32m" + appName + " \033[0;32mv" + semverInfo() + "\033[0;37m by \033[1;37m" + appDev)
-	fmt.Println("\033[0;32m" + appRepository + "\n")
+	fmt.Println("\033[0;32m" + appRepository + "\n" + appURL + "\n")
 	fmt.Println("\033[1;37mMIT License\n\nCopyright (c) 2020-2021 RockSteady, TurtleCoin Developers\n\033[1;30mPermission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the 'Software'), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in allcopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.")
 	fmt.Println()
 }

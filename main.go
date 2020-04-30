@@ -32,6 +32,7 @@ import (
 	routing "github.com/libp2p/go-libp2p-routing"
 	secio "github.com/libp2p/go-libp2p-secio"
 	libp2ptls "github.com/libp2p/go-libp2p-tls"
+	ma "github.com/multiformats/go-multiaddr"
 	"github.com/sirupsen/logrus"
 	rashedCrypto "github.com/turtlecoin/go-turtlecoin/crypto"
 	rashedMnemonic "github.com/turtlecoin/go-turtlecoin/walletbackend/mnemonics"
@@ -103,6 +104,30 @@ func main() {
 	ascii()
 	go restAPI()
 	inputHandler()
+}
+
+func multiAddr() {
+
+	// construct from a string (err signals parse failure)
+	m1, err := ma.NewMultiaddr("/ip4/127.0.0.1/udp/1234")
+	handle("", err)
+	// construct from bytes (err signals parse failure)
+	m2, err := ma.NewMultiaddrBytes(m1.Bytes())
+	handle("", err)
+	fmt.Println(m2)
+	// // true
+	// // strings.Equal(m1.String(), "/ip4/127.0.0.1/udp/1234")
+	// // strings.Equal(m1.String(), m2.String())
+	// bytes.Equal(m1.Bytes(), m2.Bytes())
+	// m1.Equal(m2)
+	// m2.Equal(m1)
+
+	// // tunneling (en/decap)
+	// printer, _ := ma.NewMultiaddr("/ip4/192.168.0.13/tcp/80")
+	// proxy, _ := ma.NewMultiaddr("/ip4/10.20.30.40/tcp/443")
+	// printerOverProxy := proxy.Encapsulate(printer)
+	// proxyAgain := printerOverProxy.Decapsulate(printer)
+	// fmt.Println(proxyAgain)
 }
 
 func restAPI() {
@@ -425,7 +450,7 @@ func createPeer() peer.ID {
 
 func clearPeerID(file string) {
 	err := os.Remove(file)
-	handle("Error deleting stale peer file: ", err)
+	logrus.Debug(err)
 }
 
 func menuCreatePeer() {
@@ -438,7 +463,7 @@ func menuCreatePeer() {
 	}
 	defer openPeerIDFile.Close()
 
-	openPeerIDFile.WriteString(p2pPeerID.Pretty())
+	openPeerIDFile.WriteString(p2pPeerID.String())
 }
 
 // P2P stream open r/w
@@ -606,6 +631,8 @@ func inputHandler() {
 			benchmark()
 		} else if strings.Compare("create-peer", text) == 0 {
 			menuCreatePeer()
+		} else if strings.Compare("show-multiaddr", text) == 0 {
+			multiAddr()
 		} else if strings.Compare("exit", text) == 0 {
 			logrus.Warning("Exiting")
 			menuExit()
@@ -651,6 +678,7 @@ func menu() {
 	color.Set(color.FgWhite)
 	fmt.Println("create-peer \t\t Creates IPFS peer")
 	color.Set(color.FgHiBlack)
+	fmt.Println("show-multiaddr \t\t Displays multiaddr address")
 	fmt.Println("list-servers \t\t Lists pinning servers")
 	color.Set(color.FgGreen)
 	fmt.Println("\nGENERAL_OPTIONS")

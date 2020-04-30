@@ -21,3 +21,6 @@ graph/*.json
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+# Place the notes that are not worth being issues in here
+./notes/*

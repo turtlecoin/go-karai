@@ -50,17 +50,19 @@ const credentialsFile = "private_credentials.karai"
 const currentJSON = "./config/milestone.json"
 const graphDir = "./graph"
 const hashDat = graphDir + "/ipfs-hash-list.dat"
+const p2pConfigDir = "./config/p2p"
+const configPeerIDFile = p2pConfigDir + "/peer.id"
 
 // Coordinator values
 var isCoordinator bool = false
 var karaiPort string = "4200"
-var p2pPeerID string = ""
+var p2pPeerID string
 
 // Version string
 func semverInfo() string {
 	var majorSemver, minorSemver, patchSemver, wholeString string
 	majorSemver = "0"
-	minorSemver = "3"
+	minorSemver = "4"
 	patchSemver = "6"
 	wholeString = majorSemver + "." + minorSemver + "." + patchSemver
 	return wholeString
@@ -78,20 +80,24 @@ type GraphTx struct {
 	Extra    []byte
 	PrevHash []byte
 	// TxVer int
-	// WavePosition int
 }
 
 // // SubGraph This is a struct for Tx wave construction
 // type SubGraph struct {
-// 	subGraphID   int
-// 	timeStamp    int64
-// 	milestone   int
-// 	transactions []byte
-// 	// waveTip    GraphTx.Hash
+// 	subGraphID       int
+// 	timeStamp        int64
+// 	milestone        int
+// 	transactions     []byte
+// 	subgraphChildren int
+// 	supgraphOrder    int
+// 	subgraphSize     int
+// 	subgraphPeers    []byte
+// 	waveTip          *GraphTx.Hash
 // }
 
 // Hello Karai
 func main() {
+	clearPeerID(configPeerIDFile)
 	locateGraphDir()
 	checkCreds()
 	ascii()
@@ -103,7 +109,7 @@ func restAPI() {
 	r := mux.NewRouter()
 
 	api := r.PathPrefix("/api/v1").Subrouter()
-	api.HandleFunc("", returnPeerID).Methods(http.MethodGet)
+	api.HandleFunc("/", returnPeerID).Methods(http.MethodGet)
 	api.HandleFunc("/version", returnVersion).Methods(http.MethodGet)
 	api.HandleFunc("/transactions", returnTransactions).Methods(http.MethodGet)
 	// api.HandleFunc("", post).Methods(http.MethodPost)
@@ -122,13 +128,27 @@ func notFound(w http.ResponseWriter, r *http.Request) {
 func returnPeerID(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	if p2pPeerID == "" {
-		w.Write([]byte("{\"p2p_peer_ID\": \"ERR: NO PEER ID\"}"))
-	} else if p2pPeerID != "" {
-		w.Write([]byte("{\"p2p_peer_ID\": \"" + p2pPeerID + "\"}"))
-	}
-}
 
+	peerFile, err := os.OpenFile(configPeerIDFile,
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		handle("something went wrong creating a fresh peer.id file: ", err)
+	}
+	defer peerFile.Close()
+
+	fileToRead, err := ioutil.ReadFile(configPeerIDFile)
+	handle("nazi porn", err)
+	logrus.Debug("Peer ID requested from API")
+	// fmt.Print("\n", string(fileToRead))
+	w.Write([]byte("{\"p2p_peer_ID\": \"" + string(fileToRead) + "\"}"))
+
+}
+func printFile(fileToPrint string) string {
+	file, err := ioutil.ReadFile(configPeerIDFile)
+	handle("There was a problem reading the peer file", err)
+	fmt.Print(string(file))
+	return string(file)
+}
 func returnVersion(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -358,8 +378,8 @@ func loadMilestoneJSON() string {
 // 	// assign positions on graph
 // }
 
-// menuCreatePeer Create Libp2p Peer
-func menuCreatePeer() {
+// createPeer Create Libp2p Peer
+func createPeer() peer.ID {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	priv, _, err := crypto.GenerateKeyPair(
@@ -400,7 +420,26 @@ func menuCreatePeer() {
 		pi, _ := peer.AddrInfoFromP2pAddr(addr)
 		nodePeer.Connect(ctx, *pi)
 	}
-	fmt.Printf("Peer ID is %s\n", nodePeer.ID())
+
+	return nodePeer.ID()
+}
+
+func clearPeerID(file string) {
+	err := os.Remove(file)
+	handle("Error deleting stale peer file: ", err)
+}
+
+func menuCreatePeer() {
+	clearPeerID(configPeerIDFile)
+	p2pPeerID := createPeer()
+	openPeerIDFile, err := os.OpenFile(configPeerIDFile,
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		handle("something went wrong: ", err)
+	}
+	defer openPeerIDFile.Close()
+
+	openPeerIDFile.WriteString(p2pPeerID.Pretty())
 }
 
 // P2P stream open r/w

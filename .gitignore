@@ -11,6 +11,7 @@ go-karai
 graph/*.dat
 graph/*.json
 .vscode/
+./config/p2p/*
 
 # Test binary, built with `go test -c`
 *.test

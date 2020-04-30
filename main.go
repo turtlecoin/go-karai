@@ -107,7 +107,6 @@ func main() {
 
 func restAPI() {
 	r := mux.NewRouter()
-
 	api := r.PathPrefix("/api/v1").Subrouter()
 	api.HandleFunc("/", returnPeerID).Methods(http.MethodGet)
 	api.HandleFunc("/version", returnVersion).Methods(http.MethodGet)

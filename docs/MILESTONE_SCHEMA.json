@@ -1,8 +1,8 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema",
     "type": "object",
-    "title": "Karai - Milestone Transaction Schema",
-    "description": "This schema helps to annotate and validate Karai milestone transactions.",
+    "title": "Karai - Milestone Data Schema",
+    "description": "This schema helps to annotate and validate Karai milestone data.",
     "default": {},
     "additionalProperties": true,
     "required": [

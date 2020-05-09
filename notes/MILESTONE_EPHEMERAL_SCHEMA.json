@@ -1,0 +1,103 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "$id": "http://example.com/example.json",
+    "type": "array",
+    "title": "Karai - Milestone Transaction Schema",
+    "description": "This schema helps to annotate and validate Karai milestone transaction.",
+    "default": [],
+    "additionalItems": true,
+    "items": {
+        "$id": "#/items",
+        "type": "object",
+        "title": "The Items Schema",
+        "description": "n explaAnation about the purpose of this instance.",
+        "default": {},
+        "examples": [
+            {
+                "coord_sig": "2efc5209e8f19c7d0f50ac08107b0c5690ba173c6371d8d9a9b46b1790b4e709ce7e492671cb76203ff4b40e40bbaf2075db7741eeae8b4a641fe36bfa8b880b",
+                "coord_pub": "cfae4ecca8ed282ab51ae16bf755e510b1ce52d6e84263f357b0a524691e9259",
+                "signed_msg": "48a49aa318fa36ee623bae1b25e23d87a21923d889f620e62106009699de17fc"
+            },
+            {
+                "milestone_hash": "ecbe9ed98d8fc513cc6e508ee20ac06dfe7178ad3855e2afbd626dfe7178ad3a",
+                "participant_matrix": [
+                    {
+                        "participants": [
+                            "77a4781055c9d26c3136afefa7823037e898f92105bcaaeac385719d42b50f20",
+                            "b7e0d0839883bf207b39e032343fa1569dbfeb6075c9fa9e5de41e025c367e90",
+                            "6eab8b2f2e55e0b10a527e2a9ec85acc3c89e3f9cb92fa30e9af0bc49b5181c3"
+                        ],
+                        "index": 0.0
+                    }
+                ],
+                "milestone_id": 0.0,
+                "milestone_prev": "",
+                "wavetip_matrix": [
+                    {
+                        "index": 0.0,
+                        "tx": "dfe7178ad3855e2afbd626a7ca38975b901591859c2cdbe6da559dfe8ef3bc4a"
+                    }
+                ]
+            },
+            {
+                "tx_hash": "a0c1d8ccae6271a1906c4a7b881ce8d0808702ad506d400e8cb1a14f15063c08",
+                "tx_data": {
+                    "channel_params": {
+                        "n_interval": 30.0,
+                        "public": true,
+                        "name": "karai-transaction-channel",
+                        "n_txspread": 1.0
+                    },
+                    "peer_data": {
+                        "ifps_peer_id": "QmfMAVSMyw4T9Mu3y8hM4phLWbM5NhdYuq5HRmKy8kX3SD",
+                        "ipfs_pub_key": "CAASpgIwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDI3gvSHQ/V3o7wWLp+KLw8w4k74JGF7+lxPAK0Z6SAp2CELvr+FJfflcIAnOna5NekFj3oZhgI3sTAMRixn802S+OUmBuFrtdxd8SX1PjwCmdzm+xTWU8IdrZbxzeHY/n4i34ZyOEybdWEvR4oExplxTk9mnZmKvZvIH3lCQIbfkhoJFTB4D4R5KG5YcEQ6/2hLvzdoMyUcVZRf7dRxWUyoXRdE5810tsCBECrRzLX9nWERP/ki4elvJlDQYU5bHUazZy4tbl9kEbP28gjm9XGYKxjAWyXG+uMZoohCujSNN3SQzo/5zE4VWzi4LC01ourl8xR9pd5HhzH1oKcYBoZAgMBAAE=",
+                        "ip4": "123.34.45.56"
+                    },
+                    "chan_milestone": 0.0,
+                    "coord_params": {
+                        "majorSemver": 0.0,
+                        "address": "TRTLuxMpUNTBqfWshbc65E7Yqx17rQpHQZC5HyANaTL37AQm2fRsNDXG37jxPhXXa5NMJVLFJpQa9iQn9Se87VNuWwPHWScoZLY",
+                        "minorSemver": 2.0,
+                        "patchSemver": 1.0
+                    }
+                },
+                "tx_prev": "1ae3529687d8340213f6ffc2c5a4d2747ff35575eb12841e7bfea60660cd69c1",
+                "tx_type": 1.0
+            }
+        ],
+        "additionalProperties": true,
+        "required": ["coord_pub", "coord_sig", "signed_msg"],
+        "properties": {
+            "coord_pub": {
+                "$id": "#/items/properties/coord_pub",
+                "type": "string",
+                "title": "The Coord_pub Schema",
+                "description": "An explanation about the purpose of this instance.",
+                "default": "",
+                "examples": [
+                    "cfae4ecca8ed282ab51ae16bf755e510b1ce52d6e84263f357b0a524691e9259"
+                ]
+            },
+            "coord_sig": {
+                "$id": "#/items/properties/coord_sig",
+                "type": "string",
+                "title": "The Coord_sig Schema",
+                "description": "An explanation about the purpose of this instance.",
+                "default": "",
+                "examples": [
+                    "2efc5209e8f19c7d0f50ac08107b0c5690ba173c6371d8d9a9b46b1790b4e709ce7e492671cb76203ff4b40e40bbaf2075db7741eeae8b4a641fe36bfa8b880b"
+                ]
+            },
+            "signed_msg": {
+                "$id": "#/items/properties/signed_msg",
+                "type": "string",
+                "title": "The Signed_msg Schema",
+                "description": "An explanation about the purpose of this instance.",
+                "default": "",
+                "examples": [
+                    "48a49aa318fa36ee623bae1b25e23d87a21923d889f620e62106009699de17fc"
+                ]
+            }
+        }
+    }
+}

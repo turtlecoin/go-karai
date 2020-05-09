@@ -24,3 +24,6 @@ graph/*.json
 
 # Place the notes that are not worth being issues in here
 ./notes/*
+./notes
+notes
+notes/

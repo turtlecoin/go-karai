@@ -94,7 +94,7 @@
         "tx_type": 1,
         "tx_hash": "a0c1d8ccae6271a1906c4a7b881ce8d0808702ad506d400e8cb1a14f15063c08",
         "tx_prev": "1ae3529687d8340213f6ffc2c5a4d2747ff35575eb12841e7bfea60660cd69c1",
-        "tx_extra": {
+        "tx_data": {
             "chan_milestone": 0,
             "channel_params": {
                 "name": "karai-transaction-channel",

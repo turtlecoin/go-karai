@@ -22,16 +22,9 @@ import (
 	"github.com/gorilla/mux"
 	shell "github.com/ipfs/go-ipfs-api"
 	"github.com/libp2p/go-libp2p"
-	autonat "github.com/libp2p/go-libp2p-autonat-svc"
-	connmgr "github.com/libp2p/go-libp2p-connmgr"
-	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/peer"
-	dht "github.com/libp2p/go-libp2p-kad-dht"
-	libp2pquic "github.com/libp2p/go-libp2p-quic-transport"
-	routing "github.com/libp2p/go-libp2p-routing"
-	secio "github.com/libp2p/go-libp2p-secio"
-	libp2ptls "github.com/libp2p/go-libp2p-tls"
+	peerstore "github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/p2p/protocol/ping"
+	"github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/sirupsen/logrus"
 	rashedCrypto "github.com/turtlecoin/go-turtlecoin/crypto"
@@ -133,7 +126,8 @@ func multiAddr() {
 func restAPI() {
 	r := mux.NewRouter()
 	api := r.PathPrefix("/api/v1").Subrouter()
-	api.HandleFunc("/", returnPeerID).Methods(http.MethodGet)
+	api.HandleFunc("/", home).Methods(http.MethodGet)
+	api.HandleFunc("/peer", returnPeerID).Methods(http.MethodGet)
 	api.HandleFunc("/version", returnVersion).Methods(http.MethodGet)
 	api.HandleFunc("/transactions", returnTransactions).Methods(http.MethodGet)
 	// api.HandleFunc("", post).Methods(http.MethodPost)
@@ -149,6 +143,13 @@ func notFound(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(`{"bruh": "lol"}`))
 }
 
+func home(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	w.Write([]byte("Hello " + appName + " v" + semverInfo()))
+}
+
 func returnPeerID(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -161,18 +162,19 @@ func returnPeerID(w http.ResponseWriter, r *http.Request) {
 	defer peerFile.Close()
 
 	fileToRead, err := ioutil.ReadFile(configPeerIDFile)
-	handle("nazi porn", err)
-	logrus.Debug("Peer ID requested from API")
-	// fmt.Print("\n", string(fileToRead))
+	// fmt.Println(fileToRead)
+	handle("Error: ", err)
 	w.Write([]byte("{\"p2p_peer_ID\": \"" + string(fileToRead) + "\"}"))
 
 }
-func printFile(fileToPrint string) string {
-	file, err := ioutil.ReadFile(configPeerIDFile)
-	handle("There was a problem reading the peer file", err)
-	fmt.Print(string(file))
-	return string(file)
-}
+
+// func printFile(fileToPrint string) string {
+// 	file, err := ioutil.ReadFile(configPeerIDFile)
+// 	handle("There was a problem reading the peer file", err)
+// 	fmt.Print(string(file))
+// 	return string(file)
+// }
+
 func returnVersion(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -402,50 +404,45 @@ func loadMilestoneJSON() string {
 // 	// assign positions on graph
 // }
 
-// createPeer Create Libp2p Peer
-func createPeer() peer.ID {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	priv, _, err := crypto.GenerateKeyPair(
-		crypto.Ed25519, -1,
+func connectChannel(channel string) (bool, string) {
+	ctx := context.Background()
+	node, err := libp2p.New(ctx,
+		libp2p.ListenAddrStrings("/ip4/127.0.0.1/tcp/0"),
+		libp2p.Ping(false),
 	)
-	handle("Error generating libp2p keypair: ", err)
-	var idht *dht.IpfsDHT
-	nodePeer, err := libp2p.New(ctx,
-		libp2p.Identity(priv),
-		libp2p.ListenAddrStrings(
-			"/ip4/0.0.0.0/tcp/9000",
-			"/ip4/0.0.0.0/udp/9000/quic",
-		),
-		libp2p.Security(libp2ptls.ID, libp2ptls.New),
-		libp2p.Security(secio.ID, secio.New),
-		libp2p.Transport(libp2pquic.NewTransport),
-		libp2p.DefaultTransports,
-		libp2p.ConnectionManager(connmgr.NewConnManager(
-			100,         // Lowwater
-			400,         // HighWater,
-			time.Minute, // GracePeriod
-		)),
-		libp2p.NATPortMap(),
-		libp2p.Routing(func(h host.Host) (routing.PeerRouting, error) {
-			idht, err = dht.New(ctx, h)
-			return idht, err
-		}),
-		libp2p.EnableAutoRelay(),
-	)
-	handle("Error connecting as libp2p peer: ", err)
-	_, err = autonat.NewAutoNATService(ctx, nodePeer,
-		libp2p.Security(libp2ptls.ID, libp2ptls.New),
-		libp2p.Security(secio.ID, secio.New),
-		libp2p.Transport(libp2pquic.NewTransport),
-		libp2p.DefaultTransports,
-	)
-	for _, addr := range dht.DefaultBootstrapPeers {
-		pi, _ := peer.AddrInfoFromP2pAddr(addr)
-		nodePeer.Connect(ctx, *pi)
+	handle("Something went wrong creating new peer context: ", err)
+	pingService := &ping.PingService{Host: node}
+	node.SetStreamHandler(ping.ID, pingService.PingHandler)
+	peerInfo := peerstore.AddrInfo{
+		ID:    node.ID(),
+		Addrs: node.Addrs(),
 	}
-
-	return nodePeer.ID()
+	color.Set(color.FgHiCyan, color.Bold)
+	addrs, _ := peerstore.AddrInfoToP2pAddrs(&peerInfo)
+	fmt.Println("\nlibp2p node address:")
+	color.Set(color.FgHiBlack, color.Bold)
+	fmt.Println(addrs[0])
+	// peerEndPointText, _ := fmt.Println(addrs[0])
+	addr, _ := multiaddr.NewMultiaddr(channel)
+	peer, _ := peerstore.AddrInfoFromP2pAddr(addr)
+	color.Set(color.FgHiCyan, color.Bold)
+	fmt.Println("\nConnecting to: ")
+	color.Set(color.FgHiBlack, color.Bold)
+	fmt.Println(addr)
+	ch := pingService.Ping(ctx, peer.ID)
+	res := <-ch
+	color.Set(color.FgHiRed, color.Bold)
+	if err := node.Close(); err != nil {
+		handle("\nClosing: ", err)
+	}
+	if res.RTT >= 0 {
+		color.Set(color.FgHiGreen, color.Bold)
+		fmt.Println("\nConnected to: ", addr, "in", res.RTT)
+		return true, addrs[0].String()
+	} else {
+		color.Set(color.FgHiRed, color.Bold)
+		return false, addrs[0].String()
+	}
 }
 
 func clearPeerID(file string) {
@@ -453,9 +450,15 @@ func clearPeerID(file string) {
 	logrus.Debug(err)
 }
 
-func menuCreatePeer() {
-	clearPeerID(configPeerIDFile)
-	p2pPeerID := createPeer()
+func menuCreatePeer(channel string) {
+	// clearPeerID(configPeerIDFile)
+	status, p2pPeerID := connectChannel(channel)
+	if status == true {
+		fmt.Println("Success!")
+	} else {
+		color.Set(color.FgHiRed, color.Bold)
+		fmt.Println("Connection failed: ", status)
+	}
 	openPeerIDFile, err := os.OpenFile(configPeerIDFile,
 		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -463,8 +466,60 @@ func menuCreatePeer() {
 	}
 	defer openPeerIDFile.Close()
 
-	openPeerIDFile.WriteString(p2pPeerID.String())
+	openPeerIDFile.WriteString(p2pPeerID)
 }
+
+// // createPeer Create Libp2p Peer
+// func createPeer() peer.ID {
+// 	ctx, cancel := context.WithCancel(context.Background())
+// 	defer cancel()
+// 	priv, _, err := crypto.GenerateKeyPair(
+// 		crypto.Ed25519, -1,
+// 	)
+// 	handle("Error generating libp2p keypair: ", err)
+// 	var idht *dht.IpfsDHT
+// 	nodePeer, err := libp2p.New(ctx,
+// 		libp2p.Identity(priv),
+// 		libp2p.ListenAddrStrings(
+// 			"/ip4/0.0.0.0/tcp/9000",
+// 			"/ip4/0.0.0.0/udp/9000/quic",
+// 		),
+// 		libp2p.Security(libp2ptls.ID, libp2ptls.New),
+// 		libp2p.Security(secio.ID, secio.New),
+// 		libp2p.Transport(libp2pquic.NewTransport),
+// 		libp2p.DefaultTransports,
+// 		libp2p.ConnectionManager(connmgr.NewConnManager(
+// 			100,         // Lowwater
+// 			400,         // HighWater,
+// 			time.Minute, // GracePeriod
+// 		)),
+// 		libp2p.NATPortMap(),
+// 		libp2p.Routing(func(h host.Host) (routing.PeerRouting, error) {
+// 			idht, err = dht.New(ctx, h)
+// 			return idht, err
+// 		}),
+// 		libp2p.EnableAutoRelay(),
+// 	)
+// 	handle("Error connecting as libp2p peer: ", err)
+// 	_, err = autonat.NewAutoNATService(ctx, nodePeer,
+// 		libp2p.Security(libp2ptls.ID, libp2ptls.New),
+// 		libp2p.Security(secio.ID, secio.New),
+// 		libp2p.Transport(libp2pquic.NewTransport),
+// 		libp2p.DefaultTransports,
+// 	)
+// 	for _, addr := range dht.DefaultBootstrapPeers {
+// 		pi, _ := peer.AddrInfoFromP2pAddr(addr)
+// 		nodePeer.Connect(ctx, *pi)
+// 	}
+
+// 	peerInfo := peerstore.AddrInfo{
+// 		ID:    nodePeer.ID(),
+// 		Addrs: nodePeer.Addrs(),
+// 	}
+// 	addrs, err := peerstore.AddrInfoToP2pAddrs(&peerInfo)
+// 	fmt.Println("li", addrs[0])
+// 	return nodePeer.ID()
+// }
 
 // P2P stream open r/w
 // func handleStream(s network.Stream) {
@@ -500,7 +555,7 @@ func spawnChannel() {
 		var prevHash string = fmt.Sprintf("%x", transaction.PrevHash)
 		// Root Tx will not have a previous hash
 		if prevHash == "" {
-			dataString := "{\n\t\"tx_type\": " + strconv.Itoa(transaction.TxType) + ",\n\t\"tx_hash\": \"" + hash + "\",\n\t\"tx_extra\": \"" + string(transaction.Extra) + "\"\n}"
+			dataString := "{\n\t\"tx_type\": " + strconv.Itoa(transaction.TxType) + ",\n\t\"tx_hash\": \"" + hash + "\",\n\t\"tx_data\": \"" + string(transaction.Extra) + "\"\n}"
 			f, _ := os.Create(graphDir + "/" + "Tx_" + strconv.Itoa(key) + ".json")
 			w := bufio.NewWriter(f)
 			w.WriteString(dataString)
@@ -508,7 +563,7 @@ func spawnChannel() {
 			// fmt.Printf("\nTx(%x) %x\n", key, transaction.Hash)
 			fmt.Printf("\nTx(%v) %x\n", color.YellowString(strconv.Itoa(key)), transaction.Hash)
 		} else if len(prevHash) > 2 {
-			dataString := "{\n\t\"tx_type\": " + strconv.Itoa(transaction.TxType) + ",\n\t\"tx_hash\": \"" + hash + "\",\n\t\"tx_prev\": \"" + prevHash + "\",\n\t\"tx_extra\": " + string(transaction.Extra) + "\n}"
+			dataString := "{\n\t\"tx_type\": " + strconv.Itoa(transaction.TxType) + ",\n\t\"tx_hash\": \"" + hash + "\",\n\t\"tx_prev\": \"" + prevHash + "\",\n\t\"tx_data\": " + string(transaction.Extra) + "\n}"
 			f, _ := os.Create(graphDir + "/" + "Tx_" + strconv.Itoa(key) + ".json")
 			w := bufio.NewWriter(f)
 			w.WriteString(dataString)
@@ -552,7 +607,7 @@ func benchmark() {
 		var prevHash string = fmt.Sprintf("%x", transaction.PrevHash)
 		// Root Tx will not have a previous hash
 		if prevHash == "" {
-			dataString := "{\n\t\"tx_type\": " + strconv.Itoa(transaction.TxType) + ",\n\t\"tx_hash\": \"" + hash + "\",\n\t\"tx_extra\": \"" + string(transaction.Extra) + "\"\n}"
+			dataString := "{\n\t\"tx_type\": " + strconv.Itoa(transaction.TxType) + ",\n\t\"tx_hash\": \"" + hash + "\",\n\t\"tx_data\": \"" + string(transaction.Extra) + "\"\n}"
 			f, _ := os.Create(graphDir + "/" + "Tx_" + strconv.Itoa(key) + ".json")
 			w := bufio.NewWriter(f)
 			w.WriteString(dataString)
@@ -560,7 +615,7 @@ func benchmark() {
 			// fmt.Printf("\nTx(%x) %x\n", key, transaction.Hash)
 			fmt.Printf("\nTx(%v) %x\n", color.YellowString(strconv.Itoa(key)), transaction.Hash)
 		} else if len(prevHash) > 2 {
-			dataString := "{\n\t\"tx_type\": " + strconv.Itoa(transaction.TxType) + ",\n\t\"tx_hash\": \"" + hash + "\",\n\t\"tx_prev\": \"" + prevHash + "\",\n\t\"tx_extra\": " + string(transaction.Extra) + "\n}"
+			dataString := "{\n\t\"tx_type\": " + strconv.Itoa(transaction.TxType) + ",\n\t\"tx_hash\": \"" + hash + "\",\n\t\"tx_prev\": \"" + prevHash + "\",\n\t\"tx_data\": " + string(transaction.Extra) + "\n}"
 			f, _ := os.Create(graphDir + "/" + "Tx_" + strconv.Itoa(key) + ".json")
 			w := bufio.NewWriter(f)
 			w.WriteString(dataString)
@@ -629,8 +684,10 @@ func inputHandler() {
 		} else if strings.Compare("benchmark", text) == 0 {
 			logrus.Debug("Benchmark")
 			benchmark()
-		} else if strings.Compare("create-peer", text) == 0 {
-			menuCreatePeer()
+			// } else if strings.Compare("create-peer", text) == 0 {
+			// 	menuCreatePeer()
+		} else if strings.HasPrefix(text, "connect-channel") {
+			menuCreatePeer(strings.TrimPrefix(text, "connect-channel "))
 		} else if strings.Compare("show-multiaddr", text) == 0 {
 			multiAddr()
 		} else if strings.Compare("exit", text) == 0 {
@@ -676,7 +733,7 @@ func menu() {
 	color.Set(color.FgGreen)
 	fmt.Println("\nIPFS_OPTIONS")
 	color.Set(color.FgWhite)
-	fmt.Println("create-peer \t\t Creates IPFS peer")
+	fmt.Println("connect-channel <ktx> \t Connects to channel")
 	color.Set(color.FgHiBlack)
 	fmt.Println("show-multiaddr \t\t Displays multiaddr address")
 	fmt.Println("list-servers \t\t Lists pinning servers")

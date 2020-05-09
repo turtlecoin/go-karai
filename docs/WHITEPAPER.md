@@ -25,7 +25,7 @@ Transactions are raw JSON documents similar to this example:
     "tx_type": 2, // tx_type 2 is a normal transaction
     "tx_hash": "5f0433c98576b29a09a8e43e82fdb1f7df1a4895b1c05bddc10c717630c38ba6",
     "tx_prev": "26b858334a5d3a5e28a21af762aed33f822ec57d45bdf40368408f9a0bbad08c",
-    "tx_extra": { "tx_slot": 3 }
+    "tx_data": { "tx_slot": 3 }
 }
 ```
 
@@ -42,7 +42,7 @@ Milestones are raw JSON documents that modify governance variables for the chann
     "tx_type": 1, // tx_type 1 is a milestone transaction
     "tx_hash": "5477e3d072e206770cb2530e116ca2338b24537f113a5ec9d421cfa32a596ab3",
     "tx_prev": "96b94244d07d046eb7a153d44e3a0db41a52290436ccbfc924b4b5ae206ddb84",
-    "tx_extra": {
+    "tx_data": {
         "chan_milestone": 0,
         "channel_params": {
             "name": "karai-transaction-channel",
@@ -65,7 +65,7 @@ Milestones are raw JSON documents that modify governance variables for the chann
 }
 ```
 
-The go-karai program generates a pointer that links a Karai transaction channel to the TurtleCoin Network. These pointers can be scanned for on the TurtleCoin Network by looking for an encoded address in the `Tx_Extra` field. Each pointer is generated in Hex format as well as Ascii format for human readable output. All pointers get stored and scanned as hex. Ascii pointers are for convenience only, but generally have the format of `ktx(ip:port)`.
+The go-karai program generates a pointer that links a Karai transaction channel to the TurtleCoin Network. These pointers can be scanned for on the TurtleCoin Network by looking for an encoded address in the `tx_data` field. Each pointer is generated in Hex format as well as Ascii format for human readable output. All pointers get stored and scanned as hex. Ascii pointers are for convenience only, but generally have the format of `ktx(ip:port)`.
 
 Karai Transaction Channel pointers look like the pointer in this example:
 
